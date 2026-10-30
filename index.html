@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>البراق للأجهزة الكهربائية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: Tahoma, sans-serif;
+            margin: 0;
+            scroll-behavior: smooth;
+        }
+
+        .header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .navbar a {
+            color: #1e293b;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: bold;
+        }
+        .navbar a:hover { color: #1e3a8a; }
+
+        /* أيقونة عربة التسوق */
+        .cart-icon-btn {
+            position: relative;
+            background: #1e3a8a;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cart-count {
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 7px;
+            font-size: 12px;
+        }
+
+        /* شريط البحث الاحترافي مع زر بحث صريح */
+        .search-section {
+            background: #fff;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .search-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            gap: 8px;
+        }
+        .search-wrapper input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            direction: rtl;
+        }
+        .search-wrapper input:focus {
+            border-color: #1e3a8a;
+        }
+        .search-btn-action {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .search-btn-action:hover { background: #1d4ed8; }
+
+        .category-filter-btns {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            color: #334155;
+            transition: 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: #1e3a8a;
+            color: #fff;
+            border-color: #1e3a8a;
+        }
+
+        /* قسم نتائج البحث (يظهر فقط عند البحث) */
+        #search-results-section {
+            display: none;
+            margin: 20px auto;
+            max-width: 1200px;
+            padding: 0 20px;
+        }
+        #search-results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        /* شبكة المنتجات العادية */
+        .products-container-dynamic {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px dashed #cbd5e1;
+            text-align: right;
+        }
+        .item-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s;
+        }
+        .item-card:hover {
+            transform: translateY(-3px);
+            border-color: #1e3a8a;
+        }
+        .item-card img {
+            width: 100%;
+            height: 140px;
+            object-fit: contain;
+            border-radius: 5px;
+            background: #f9f9f9;
+            cursor: pointer;
+        }
+        .item-card h4 { 
+            margin: 8px 0 4px; 
+            color: #1e3a8a; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+        .item-card h4:hover { color: #2563eb; }
+
+        .item-card .item-price { 
+            color: #16a34a; 
+            font-weight: bold; 
+            font-size: 15px; 
+            margin-bottom: 8px; 
+        }
+        
+        .btn-order-now {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 7px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            font-size: 13px;
+            transition: background 0.3s;
+            margin-bottom: 5px;
+        }
+        .btn-order-now:hover { background: #1d4ed8; }
+
+        .btn-add-cart {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 7px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+        .btn-add-cart:hover { background: #10b981; }
+
+        /* زر الانتقال لصفحة القسم الخاصة */
+        .go-to-category-page {
+            display: block;
+            margin-top: 10px;
+            background: #f1f5F9;
+            color: #1e3a8a;
+            border: 1px solid #1e3a8a;
+            text-align: center;
+            padding: 6px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .go-to-category-page:hover {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        /* النوافذ المنبثقة (Modal) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: right;
+            border: 1px solid #e2e8f0;
+        }
+        .modal-box label {
+            display: block;
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        .modal-box input, .modal-box textarea {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 4px 0 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 13px;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        .modal-box .confirm-btn { 
+            background: #1e3a8a; 
+            color: white; 
+            border: 0; 
+            padding: 10px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: bold; 
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .modal-box .confirm-btn:hover { background: #1d4ed8; }
+        .modal-box .cancel-btn { 
+            background: #ef4444; 
+            color: white; 
+            border: 0; 
+            padding: 8px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-top: 6px; 
+            font-weight: bold; 
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .cart-item-info { font-size: 13px; }
+        .cart-item-title { font-weight: bold; color: #1e3a8a; }
+        .cart-item-price { color: #16a34a; font-weight: bold; }
+        .remove-item-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container navbar">
+            <a href="#home" class="logo">
+                <img src="logo.jpg" alt="البراق للأجهزة الكهربائية" style="height: 45px; border-radius: 5px;">
+            </a>
+
+            <nav>
+                <a href="#home">الرئيسية</a>
+                <a href="#products">منتجاتنا</a>
+                <a href="#offers">العروض</a>
+                <a href="#about">عن الشركة</a>
+                <a href="#contact">تواصل معنا</a>
+            </nav>
+
+            <button class="cart-icon-btn" onclick="openCartModal()">
+                <i class="fas fa-shopping-cart"></i>
+                <span>السلة</span>
+                <span class="cart-count" id="cartCount">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- شريط البحث الاحترافي -->
+    <div class="search-section">
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="ابحث باسم الجهاز أو الماركة (مثال: ثلاجة، غسالة)..." onkeydown="if(event.key === 'Enter') triggerSearch()">
+            <button class="search-btn-action" onclick="triggerSearch()">
+                <i class="fas fa-search"></i> بحث
+            </button>
+        </div>
+        <!-- أزرار الأقسام التي تنقل لصفحات منفصلة -->
+        <div class="category-filter-btns">
+            <a href="category.html?cat=الكل" class="filter-btn">الكل</a>
+            <a href="category.html?cat=ثلاجات" class="filter-btn">ثلاجات</a>
+            <a href="category.html?cat=غسالات" class="filter-btn">غسالات</a>
+            <a href="category.html?cat=شاشات" class="filter-btn">شاشات</a>
+            <a href="category.html?cat=تكييفات" class="filter-btn">تكييفات</a>
+            <a href="category.html?cat=بوتاجازات" class="filter-btn">بوتاجازات</a>
+            <a href="category.html?cat=رفايع" class="filter-btn">رفايع</a>
+        </div>
+    </div>
+
+    <!-- قسم نتائج البحث (يظهر فقط عند البحث) -->
+    <section id="search-results-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px;">
+            <h2 style="color: #1e3a8a; margin: 0;">نتائج البحث</h2>
+            <button onclick="clearSearch()" style="background: #ef4444; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">إلغاء البحث وإظهار الكل</button>
+        </div>
+        <div id="search-results-grid"></div>
+    </section>
+
+    <main>
+        <section class="hero" id="home">
+            <div class="hero-content">
+                <span class="welcome">أهلاً بكم في البراق</span>
+                <h1>البراق للأجهزة الكهربائية</h1>
+                <p>أحدث الأجهزة الكهربائية والمنزلية بأعلى جودة وأفضل الأسعار لبيتك.</p>
+                <a href="#products" class="btn" style="background: #1e3a8a; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">تصفح منتجاتنا</a>
+            </div>
+        </section>
+
+        <section class="products section" id="products">
+            <div class="container">
+                <h2>منتجاتنا</h2>
+                <p class="section-description">اكتشف أقسام الأجهزة الكهربائية والرفايع المتاحة لدينا.</p>
+
+                <div class="product-grid">
+                    <!-- كروت الأقسام الرئيسية مع زر الانتقال للصفحة المنفصلة -->
+                    <article class="product-card" id="sec-ثلاجات">
+                        <img src="fridge.jpg" alt="الثلاجات">
+                        <div class="product-info">
+                            <h3>الثلاجات</h3>
+                            <p>أفضل ماركات الثلاجات والديب فريزر بجميع الأحجام.</p>
+                            <div class="products-container-dynamic" id="cat-ثلاجات">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=ثلاجات" class="go-to-category-page">عرض كل الثلاجات <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+
+                    <article class="product-card" id="sec-غسالات">
+                        <img src="washer.jpg" alt="الغسالات">
+                        <div class="product-info">
+                            <h3>الغسالات</h3>
+                            <p>غسالات ملابس أوتوماتيك وفوق أوتوماتيك بأحدث التقنيات.</p>
+                            <div class="products-container-dynamic" id="cat-غسالات">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=غسالات" class="go-to-category-page">عرض كل الغسالات <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+
+                    <article class="product-card" id="sec-شاشات">
+                        <img src="tv.jpg" alt="الشاشات">
+                        <div class="product-info">
+                            <h3>الشاشات</h3>
+                            <p>شاشات سمارت 4K وجميع المقاسات لتجربة مشاهدة ممتعة.</p>
+                            <div class="products-container-dynamic" id="cat-شاشات">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=شاشات" class="go-to-category-page">عرض كل الشاشات <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+
+                    <article class="product-card" id="sec-تكييفات">
+                        <img src="ac.jpg" alt="التكييفات">
+                        <div class="product-info">
+                            <h3>التكييفات</h3>
+                            <p>أجهزة تكييف موفرة للطاقة وبارد/ساخن لجميع المساحات.</p>
+                            <div class="products-container-dynamic" id="cat-تكييفات">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=تكييفات" class="go-to-category-page">عرض كل التكييفات <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+
+                    <article class="product-card" id="sec-بوتاجازات">
+                        <img src="cooker.jpg" alt="البوتاجازات">
+                        <div class="product-info">
+                            <h3>البوتاجازات وأجهزة المطبخ</h3>
+                            <p>تشكيلة مميزة من البوتاجازات وأجهزة المطبخ الآمنة.</p>
+                            <div class="products-container-dynamic" id="cat-بوتاجازات">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=بوتاجازات" class="go-to-category-page">عرض كل البوتاجازات <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+
+                    <article class="product-card" id="sec-رفايع">
+                        <img src="https://images.unsplash.com/photo-1585515320310-259814833e62?w=400" alt="الرفايع">
+                        <div class="product-info">
+                            <h3>قسم الرفايع</h3>
+                            <p>إيرفراير، خلاطات، ميكروويف وأحدث الأدوات المنزلية الصغيرة.</p>
+                            <div class="products-container-dynamic" id="cat-رفايع">
+                                <p style="font-size: 12px; color: #888;">جاري التحميل...</p>
+                            </div>
+                            <a href="category.html?cat=رفايع" class="go-to-category-page">عرض كل الرفايع <i class="fas fa-arrow-left"></i></a>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="offers section" id="offers">
+            <div class="container">
+                <h2>أحدث العروض والخصومات ⚡</h2>
+                <div class="offers-banner">
+                    <div class="offer-text">
+                        <h3>عروض تجهيز العرائس والمنزل</h3>
+                        <p>احصل على خصم خاص عند شراء طقم أجهزة كامل من البراق!</p>
+                        <a href="#contact" class="btn btn-offer" style="background: #1e3a8a; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; display: inline-block; font-weight: bold;">اسأل عن العرض</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="about section" id="about">
+            <div class="container">
+                <h2>عن شركة البراق</h2>
+                <p>البراق للأجهزة الكهربائية هي وجهتك الأولى لاقتناء أحدث وأجود الأجهزة الكهربائية والأدوات المنزلية والتكييفات بأعلى جودة وأفضل الأسعار.</p>
+            </div>
+        </section>
+
+        <section class="contact section" id="contact">
+            <div class="container">
+                <h2>تواصل مع شركة البراق</h2>
+                <div class="contact-grid">
+                    <div

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم البراق</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f3f5f8; color: #222; display: grid; place-items: center; min-height: 100vh; }
+    .login-card, .container { max-width: 1100px; width: 100%; margin: 20px auto; padding: 20px; }
+    .login-card { max-width: 400px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .card { background: white; padding: 22px; margin-bottom: 22px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.05); }
+    header { background: #102b46; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccd3db; border-radius: 7px; margin-bottom: 12px; font-size: 15px; }
+    button { border: 0; padding: 11px 17px; border-radius: 7px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%; }
+    .primary { background: #126b45; color: white; }
+    .danger { background: #b42332; color: white; }
+    #adminPanel, #loginScreen { display: none; width: 100%; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .full { grid-column: 1 / -1; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+    .product { border: 1px solid #e0e5eb; border-radius: 10px; overflow: hidden; background: white; }
+    .product img { width: 100%; height: 180px; object-fit: contain; background: #f7f8fa; }
+    .product-info { padding: 14px; }
+    #status { padding: 12px; border-radius: 7px; margin-bottom: 15px; display: none; white-space: pre-wrap; }
+    #preview { max-width: 150px; max-height: 150px; display: none; margin-top: 8px; border-radius: 6px; }
+    .extra-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .extra-previews img { width: 60px; height: 60px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
+    .upload-note { font-size: 12px; color: #666; margin-top: -8px; margin-bottom: 10px; display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- شاشة تسجيل الدخول -->
+  <div id="loginScreen" class="login-card">
+    <h2 style="text-align: center; color: #102b46; margin-bottom: 20px;">تسجيل دخول الإدارة</h2>
+    <div id="loginStatus" style="color: red; margin-bottom: 10px; font-size: 14px; display: none;"></div>
+    <form id="loginForm">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="email" required placeholder="admin@alburaq.com">
+      <label>كلمة المرور</label>
+      <input type="password" id="password" required placeholder="********">
+      <button type="submit" class="primary">دخول</button>
+    </form>
+  </div>
+
+  <!-- لوحة التحكم -->
+  <div id="adminPanel" class="container">
+    <header>
+      <h1>البراق للأجهزة الكهربائية</h1>
+      <p>لوحة التحكم الآمنة</p>
+      <button id="logoutBtn" class="danger" style="width: auto; margin-top: 10px; padding: 6px 15px;">تسجيل الخروج</button>
+    </header>
+
+    <div id="status"></div>
+
+    <section class="card">
+      <h2>إضافة منتج جديد مع الصور والتفاصيل</h2>
+      <form id="productForm">
+        <div class="form-grid">
+          <div>
+            <label>اسم المنتج *</label>
+            <input id="name" required placeholder="مثال: غسالة توشيبا / قلاية بدون زيت">
+          </div>
+          <div>
+            <label>الماركة</label>
+            <input id="brand" placeholder="توشيبا / تورنيدو">
+          </div>
+          <div>
+            <label>الموديل</label>
+            <input id="model" placeholder="فوق اوتوماتيك / 5 لتر">
+          </div>
+          <div>
+            <label>القسم *</label>
+            <select id="category">
+              <option value="ثلاجات">ثلاجات</option>
+              <option value="غسالات">غسالات</option>
+              <option value="شاشات">شاشات</option>
+              <option value="تكييفات">تكييفات</option>
+              <option value="بوتاجازات">بوتاجازات</option>
+              <option value="رفايع">رفايع (إيرفراير، خلاطات..)</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
+          <div>
+            <label>السعر بالجنيه *</label>
+            <input id="price" type="number" required placeholder="25000">
+          </div>
+          <div>
+            <label>الصورة الرئيسية من الجهاز *</label>
+            <input id="imageFile" type="file" accept="image/*" required>
+            <img id="preview" alt="معاينة الصورة الرئيسية">
+          </div>
+          <div class="full">
+            <label>صور إضافية لمعرض التفاصيل (يمكنك اختيار عدة صور معاً)</label>
+            <input id="extraImagesFiles" type="file" accept="image/*" multiple>
+            <span class="upload-note">💡 اضغط على زر Ctrl أو اشرط عدة صور معا لاختيار أكثر من صورة دفعة واحدة.</span>
+            <div id="extraPreviews" class="extra-previews"></div>
+          </div>
+          <div class="full">
+            <label>وصف المنتج</label>
+            <textarea id="description" placeholder="تفاصيل الجهاز..."></textarea>
+          </div>
+        </div>
+        <button class="primary" type="submit" style="margin-top: 15px;">حفظ ونشر المنتج</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>المنتجات المسجلة</h2>
+      <p id="count">جارٍ التحميل...</p>
+      <div id="products" class="products-grid"></div>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://vqhyvymfmadxgyqhmvpc.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_P_pqtmmkghP4istv1YfvvA_Y_O2B5QF";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loginScreen = document.getElementById("loginScreen");
+    const adminPanel = document.getElementById("adminPanel");
+    const loginForm = document.getElementById("loginForm");
+    const loginStatus = document.getElementById("loginStatus");
+    const imageFileInput = document.getElementById("imageFile");
+    const preview = document.getElementById("preview");
+    const extraImagesInput = document.getElementById("extraImagesFiles");
+    const extraPreviews = document.getElementById("extraPreviews");
+
+    // معاينة الصورة الرئيسية قبل رفعها
+    imageFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+      }
+    });
+
+    // معاينة الصور الإضافية المتعددة قبل رفعها
+    extraImagesInput.addEventListener("change", (e) => {
+      extraPreviews.innerHTML = "";
+      const files = e.target.files;
+      if (files) {
+        Array.from(files).forEach(file => {
+          const img = document.createElement("img");
+          img.src = URL.createObjectURL(file);
+          extraPreviews.appendChild(img);
+        });
+      }
+    });
+
+    async function checkUser() {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        loginScreen.style.display = "none";
+        adminPanel.style.display = "block";
+        loadProducts();
+      } else {
+        loginScreen.style.display = "block";
+        adminPanel.style.display = "none";
+      }
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginStatus.style.display = "none";
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) {
+        loginStatus.style.display = "block";
+        loginStatus.textContent = "خطأ في الإيميل أو الباسورد: " + error.message;
+        return;
+      }
+      checkUser();
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await db.auth.signOut();
+      checkUser();
+    });
+
+    const form = document.getElementById("productForm");
+    const statusBox = document.getElementById("status");
+    const productsBox = document.getElementById("products");
+    const countBox = document.getElementById("count");
+
+    function showStatus(msg, success = false) {
+      statusBox.style.display = "block";
+      statusBox.textContent = msg;
+      statusBox.style.background = success ? "#dff5e7" : "#fde8e8";
+      statusBox.style.color = success ? "#126b45" : "#a51d2d";
+    }
+
+    async function loadProducts() {
+      const { data, error } = await db.from("products").select("*").order("created_at", { ascending: false });
+      if (error) { countBox.textContent = "تعذر التحميل."; return; }
+      countBox.textContent = `عدد المنتجات: ${data.length}`;
+      if (!data.length) { productsBox.innerHTML = "<p>لا توجد منتجات مسجلة.</p>"; return; }
+
+      productsBox.innerHTML = data.map(p => `
+        <article class="product">
+          <img src="${p.image_url || 'https://via.placeholder.com/150'}" alt="${p.name}">
+          <div class="product-info">
+            <h3>${p.name}</h3>
+            <p><strong>القسم:</strong> ${p.category || 'غير محدد'}</p>
+            <p><strong>السعر:</strong> ${p.price} جنيه</p>
+            <button class="danger" onclick="deleteProduct('${p.id}')">حذف</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm("متأكدة من الحذف؟")) return;
+      await db.from("products").delete().eq("id", id);
+      loadProducts();
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showStatus("جاري رفع الصور وحفظ المنتج...", true);
+
+      const mainFile = imageFileInput.files[0];
+      let imageUrl = "";
+
+      // 1. رفع الصورة الرئيسية
+      if (mainFile) {
+        const fileExt = mainFile.name.split('.').pop();
+        const fileName = `main_${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await db.storage
+          .from("product-images")
+          .upload(fileName, mainFile);
+
+        if (uploadError) {
+          showStatus("خطأ في رفع الصورة الرئيسية: " + uploadError.message);
+          return;
+        }
+
+        const { data: publicUrlData } = db.storage
+          .from("product-images")
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // 2. رفع الصور الإضافية (أي عدد تختارية دفعة واحدة)
+      const extraFiles = extraImagesInput.files;
+      let extraImagesUrls = [];
+
+      if (extraFiles && extraFiles.length > 0) {
+        for (let i = 0; i < extraFiles.length; i++) {
+          const file = extraFiles[i];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `extra_${Date.now()}_${i}.${fileExt}`;
+
+          const { error: extraUploadError } = await db.storage
+            .from("product-images")
+            .upload(fileName, file);
+
+          if (!extraUploadError) {
+            const { data: extraPublicUrlData } = db.storage
+              .from("product-images")
+              .getPublicUrl(fileName);
+            extraImagesUrls.push(extraPublicUrlData.publicUrl);
+          }
+        }
+      }
+
+      // 3. حفظ بيانات المنتج بالكامل في جدول products
+      const { error } = await db.from("products").insert({
+        name: document.getElementById("name").value,
+        brand: document.getElementById("brand").value,
+        model: document.getElementById("model").value,
+        category: document.getElementById("category").value,
+        price: Number(document.getElementById("price").value),
+        description: document.getElementById("description").value,
+        image_url: imageUrl,
+        extra_images: extraImagesUrls.join(",") // حفظ الروابط مفصولة بفاصلة لعرضها في المعرض
+      });
+
+      if (error) {
+        showStatus("خطأ في حفظ المنتج: " + error.message);
+      } else {
+        showStatus("تم رفع الصور وحفظ المنتج بكل تفاصيله بنجاح!", true);
+        form.reset();
+        preview.style.display = "none";
+        extraPreviews.innerHTML = "";
+        loadProducts();
+      }
+    });
+
+    checkUser();
+  </script>
+</body>
+</html>
